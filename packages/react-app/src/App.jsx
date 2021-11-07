@@ -50,7 +50,7 @@ console.log("📦 Assets: ",assets)
 
 
 /// 📡 What chain are your contracts deployed to?
-const targetNetwork = NETWORKS['localhost']; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
+const targetNetwork = NETWORKS['rinkeby']; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
 const DEBUG = false
@@ -178,45 +178,13 @@ function App(props) {
 
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [viewModalVisible, setViewModalVisible] = useState(false);
   const [auctionDetails, setAuctionDetails] = useState({price: "", duration: ""});
   const [auctionToken, setAuctionToken] = useState("");
-  const [viewAuctionToken, setViewAuctionToken] = useState("");
-
   //
   // 🧠 This effect will update yourCollectibles by polling when your balance changes
   //
   const yourBalance = balance && balance.toNumber && balance.toNumber()
   const [ yourCollectibles, setYourCollectibles ] = useState()
-
-  // useEffect(()=>{
-  //   const updateYourCollectibles = async () => {
-  //     let collectibleUpdate = []
-  //     for(let tokenIndex=0;tokenIndex<balance;tokenIndex++){
-  //       try{
-  //         console.log("GEtting token index",tokenIndex)
-  //         const tokenId = await readContracts.YourCollectible.tokenOfOwnerByIndex(address, tokenIndex)
-  //         console.log("tokenId",tokenId)
-  //         const tokenURI = await readContracts.YourCollectible.tokenURI(tokenId)
-  //         console.log("tokenURI",tokenURI)
-  //
-  //         const ipfsHash =  tokenURI.replace("https://ipfs.io/ipfs/","")
-  //         console.log("ipfsHash",ipfsHash)
-  //
-  //         const jsonManifestBuffer = await getFromIPFS(ipfsHash)
-  //
-  //         try{
-  //           const jsonManifest = JSON.parse(jsonManifestBuffer.toString())
-  //           // console.log("jsonManifest",jsonManifest)
-  //           collectibleUpdate.push({ id:tokenId, uri:tokenURI, owner: address, ...jsonManifest })
-  //         }catch(e){console.log(e)}
-  //
-  //       }catch(e){console.log(e)}
-  //     }
-  //     setYourCollectibles(collectibleUpdate)
-  //   }
-  //   updateYourCollectibles()
-  // },[ address, yourBalance ])
 
   /*
   const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
@@ -225,6 +193,8 @@ function App(props) {
 
 
   let networkDisplay = ""
+  console.log("selectedChainId=====",selectedChainId);
+  console.log("localChainId=====",localChainId);
   if(localChainId && selectedChainId && localChainId != selectedChainId ){
     networkDisplay = (
       <div style={{zIndex:2, position:'absolute', right:0,top:60,padding:16}}>
@@ -268,7 +238,8 @@ function App(props) {
   const faucetAvailable = localProvider && localProvider.connection && localProvider.connection.url && localProvider.connection.url.indexOf(window.location.hostname)>=0 && !process.env.REACT_APP_PROVIDER && price > 1;
 
   const [ faucetClicked, setFaucetClicked ] = useState( false );
-  if(!faucetClicked&&localProvider&&localProvider._network&&localProvider._network.chainId==31337&&yourLocalBalance&&formatEther(yourLocalBalance)<=0){
+  //if(!faucetClicked&&localProvider&&localProvider._network&&localProvider._network.chainId==31337&&yourLocalBalance&&formatEther(yourLocalBalance)<=0){
+  if(!faucetClicked&&localProvider&&localProvider._network&&yourLocalBalance&&formatEther(yourLocalBalance)<=0){
     faucetHint = (
       <div style={{padding:16}}>
         <Button type={"primary"} onClick={()=>{
@@ -365,8 +336,9 @@ function App(props) {
       cardActions.push(
         <div>
           <Button onClick={()=>{
-            // console.log("gasPrice,",gasPrice)
-            tx( writeContracts.YourCollectible.mintItem(loadedAssets[a].id,{gasPrice:gasPrice}) )
+            console.log("gasPrice,",gasPrice);
+            console.log("mintItem=======",loadedAssets[a].id);
+            tx( writeContracts.YourCollectible.mintItem(loadedAssets[a].id) )
           }}>
             Mint
           </Button>
@@ -496,9 +468,6 @@ function App(props) {
           </Menu.Item>
           <Menu.Item key="/ipfsup">
             <Link onClick={()=>{setRoute("/ipfsup")}} to="/ipfsup">IPFS Upload</Link>
-          </Menu.Item>
-          <Menu.Item key="/ipfsdown">
-            <Link onClick={()=>{setRoute("/ipfsdown")}} to="/ipfsdown">IPFS Download</Link>
           </Menu.Item>
           <Menu.Item key="/debugcontracts">
             <Link onClick={()=>{setRoute("/debugcontracts")}} to="/debugcontracts">Debug Contracts</Link>
@@ -637,31 +606,6 @@ function App(props) {
               {ipfsHash}
             </div>
 
-          </Route>
-          <Route path="/ipfsdown">
-              <div style={{ paddingTop:32, width:740, margin:"auto" }}>
-                <Input
-                  value={ipfsDownHash}
-                  placeHolder={"IPFS hash (like QmadqNw8zkdrrwdtPFK1pLi8PPxmkQ4pDJXY8ozHtz6tZq)"}
-                  onChange={(e)=>{
-                    setIpfsDownHash(e.target.value)
-                  }}
-                />
-              </div>
-              <Button style={{margin:8}} loading={sending} size="large" shape="round" type="primary" onClick={async()=>{
-                  console.log("DOWNLOADING...",ipfsDownHash)
-                  setDownloading(true)
-                  setIpfsContent()
-                  const result = await getFromIPFS(ipfsDownHash)//addToIPFS(JSON.stringify(yourJSON))
-                  if(result && result.toString) {
-                    setIpfsContent(result.toString())
-                  }
-                  setDownloading(false)
-              }}>Download from IPFS</Button>
-
-              <pre  style={{padding:16, width:500, margin:"auto",paddingBottom:150}}>
-                {ipfsContent}
-              </pre>
           </Route>
           <Route path="/debugcontracts">
               <Contract
