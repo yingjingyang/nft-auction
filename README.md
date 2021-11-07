@@ -51,9 +51,13 @@ git clone  https://github.com/yingjingyang/nft-auction.git
 ```bash
 yarn install
 ```
-3. Start local chain
-```bash
-yarn chain
+
+3. Config environment variable
+```shell
+cd packages/hardhat
+cp .env.example .env  
+
+## Then config privatekey in file .env
 ```
 
 4. The ui currently depends on a json file so to generate that run
@@ -61,7 +65,8 @@ yarn chain
 yarn upload
 ```
 
-5. Deploy your smart contracts to a local blockchain
+5. Deploy your smart contracts  
+Right now, we use Rinkeby as default testnet, so the contract will be deployed on Rinkeby.
 ```bash
 yarn deploy
 ```
