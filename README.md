@@ -57,9 +57,9 @@ yarn install
 yarn chain
 ```
 
-4. Start your React frontend
+4. The ui currently depends on a json file so to generate that run
 ```bash
-yarn start
+yarn upload
 ```
 
 5. Deploy your smart contracts to a local blockchain
@@ -67,9 +67,9 @@ yarn start
 yarn deploy
 ```
 
-6. The ui currently depends on a json file so to generate that run
+6. Start your React frontend
 ```bash
-yarn upload
+yarn start
 ```
 
 ## Smart contracts
