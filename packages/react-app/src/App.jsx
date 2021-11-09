@@ -273,17 +273,22 @@ function App(props) {
     for(let a in assets){
       try{
         const forSale = await readContracts.YourCollectible.forSale(utils.id(a))
+        console.log(forSale);
         let owner
         let auctionInfo
         if(!forSale){
           const tokenId = await readContracts.YourCollectible.uriToTokenId(utils.id(a))
-          owner = await readContracts.YourCollectible.ownerOf(tokenId)
+          // owner = await readContracts.YourCollectible.ownerOf(tokenId)
+          // const nftAddress = readContracts.YourCollectible.address;
+          // auctionInfo = await readContracts.Auction.getTokenAuctionDetails(nftAddress, tokenId);
+          let getOwner = readContracts.YourCollectible.ownerOf(tokenId);
           const nftAddress = readContracts.YourCollectible.address;
-          auctionInfo = await readContracts.Auction.getTokenAuctionDetails(nftAddress, tokenId);
+          let getAuctionInfo = readContracts.Auction.getTokenAuctionDetails(nftAddress, tokenId);
+          [owner, auctionInfo] = await Promise.all(getOwner, getAuctionInfo);
         }
 
 
-        assetUpdate.push({id:a,...assets[a],forSale:forSale,owner:owner, auctionInfo})
+        assetUpdate.push({id:a,...assets[a],forSale,owner, auctionInfo})
       }catch(e){console.log(e)}
     }
     setLoadedAssets(assetUpdate)
@@ -328,17 +333,18 @@ function App(props) {
 
   let galleryList = []
   for(let a in (loadedAssets ? loadedAssets.slice(0, 6) : [])){
-    // console.log("loadedAssets",a,loadedAssets[a])
+    console.log("loadedAssets",a,loadedAssets[a])
+    const {auctionInfo, owner, id, forSale, name, external_url, image, description } = loadedAssets[a];
 
     let cardActions = []
     let auctionDetails = [];
-    if(loadedAssets[a].forSale){
+    if(forSale){
       cardActions.push(
         <div>
           <Button onClick={()=>{
             console.log("gasPrice,",gasPrice);
-            console.log("mintItem=======",loadedAssets[a].id);
-            tx( writeContracts.YourCollectible.mintItem(loadedAssets[a].id) )
+            console.log("mintItem=======",id);
+            tx( writeContracts.YourCollectible.mintItem(id) )
           }}>
             Mint
           </Button>
@@ -349,43 +355,48 @@ function App(props) {
       const { auctionInfo } = loadedAssets[a];
       const deadline = new Date(auctionInfo.duration * 1000);
       const isEnded = deadline <= new Date();
+      const btnStyle = { marginBottom: "10px" }
+      const { isActive, seller, price, maxBidUser, maxBid } = auctionInfo;
 
       cardActions.push(
         <div>
           <div>
           owned by: <Address
-            address={loadedAssets[a].owner}
+            address={owner}
             ensProvider={mainnetProvider}
             blockExplorer={blockExplorer}
             minimized={true}
           />
           </div>
-          {!loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].owner && <><Button style={{ marginBottom: "10px" }} onClick={startAuction(loadedAssets[a].id)} disabled={address !== loadedAssets[a].owner}>Start auction</Button><br/></>}
+          {!isActive && address === owner && <><Button style={btnStyle} onClick={startAuction(id)} disabled={address !== owner}>Start auction</Button><br/></> }
+          {isActive && address === seller && <><Button style={btnStyle} onClick={completeAuction(id)}>Complete auction</Button><br/></>}
+          {isActive && address === seller && <><Button style={btnStyle} onClick={cancelAuction(id)}>Cancel auction</Button><br/></>}
+          {/* {!loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].owner && <><Button style={{ marginBottom: "10px" }} onClick={startAuction(loadedAssets[a].id)} disabled={address !== loadedAssets[a].owner}>Start auction</Button><br/></>}
           {loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].auctionInfo.seller && <><Button style={{ marginBottom: "10px" }} onClick={completeAuction(loadedAssets[a].id)}>Complete auction</Button><br/></>}
-          {loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].auctionInfo.seller && <><Button style={{ marginBottom: "10px" }} onClick={cancelAuction(loadedAssets[a].id)}>Cancel auction</Button><br/></>}
+          {loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].auctionInfo.seller && <><Button style={{ marginBottom: "10px" }} onClick={cancelAuction(loadedAssets[a].id)}>Cancel auction</Button><br/></>} */}
         </div>
       )
 
-      auctionDetails.push(auctionInfo.isActive ? (
+      auctionDetails.push(isActive ? (
           <div style={{ marginTop: "20px" }}>
             <p style={{ fontWeight: "bold" }}>Auction is in progress</p>
-            <p style={{ margin: 0, marginBottom: "2px"}}>Minimal price is {utils.formatEther(auctionInfo.price)} ETH</p>
+            <p style={{ margin: 0, marginBottom: "2px"}}>Minimal price is {utils.formatEther(price)} ETH</p>
             <p style={{ marginTop: 0 }}>{!isEnded ? `Auction ends at ${format(deadline, "MMMM dd, hh:mm:ss")}` : 'Auction has already ended'}</p>
             <div>
-              {auctionInfo.maxBidUser === constants.AddressZero ? "Highest bid was not made yet" : <div>Highest bid by: <Address
-                  address={auctionInfo.maxBidUser}
+              {maxBidUser === constants.AddressZero ? "Highest bid was not made yet" : <div>Highest bid by: <Address
+                  address={maxBidUser}
                   ensProvider={mainnetProvider}
                   blockExplorer={blockExplorer}
                   minimized={true}
-              /><p>{utils.formatEther(auctionInfo.maxBid)} ETH</p></div>}
+              /><p>{utils.formatEther(maxBid)} ETH</p></div>}
             </div>
 
             <div>
             <div style={{display: "flex", alignItems: "center", marginTop: "20px"}}>
               <p style={{margin:0, marginRight: "15px"}}>Your bid in ETH: </p>
-              <InputNumber placeholder="0.1" value={yourBid[loadedAssets[a].id]} onChange={newBid => setYourBid({...yourBid, [loadedAssets[a].id]: newBid})} style={{ flexGrow: 1 }}/>
+              <InputNumber placeholder="0.1" value={yourBid[id]} onChange={newBid => setYourBid({...yourBid, [id]: newBid})} style={{ flexGrow: 1 }}/>
             </div>
-              <Button style={{marginTop: "7px"}} onClick={() => placeBid(loadedAssets[a].id, yourBid[loadedAssets[a].id])} disabled={!yourBid[loadedAssets[a].id] || isEnded}>Place a bid</Button>
+              <Button style={{marginTop: "7px"}} onClick={() => placeBid(id, yourBid[id])} disabled={!yourBid[id] || isEnded}>Place a bid</Button>
             </div>
 
           </div>
@@ -394,17 +405,17 @@ function App(props) {
 
     galleryList.push(
         <>
-      <Card style={{width:300}} key={loadedAssets[a].name}
+      <Card style={{width:300}} key={name}
         actions={cardActions}
         title={(
           <div>
-            {loadedAssets[a].name} <a style={{cursor:"pointer",opacity:0.33}} href={loadedAssets[a].external_url} target="_blank"><LinkOutlined /></a>
+            {name} <a style={{cursor:"pointer",opacity:0.33}} href={external_url} target="_blank"><LinkOutlined /></a>
           </div>
         )}
       >
-        <img style={{maxWidth:130}} src={loadedAssets[a].image}/>
+        <img style={{maxWidth:130}} src={image}/>
         <div style={{opacity:0.77}}>
-          {loadedAssets[a].description}
+          {description}
         </div>
         {auctionDetails}
       </Card>
@@ -558,7 +569,7 @@ function App(props) {
                           address={item[0]}
                           ensProvider={mainnetProvider}
                           fontSize={16}
-                      /> =>
+                      /> {"=>"}
                       <Address
                           address={item[1]}
                           ensProvider={mainnetProvider}
