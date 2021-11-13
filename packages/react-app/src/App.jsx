@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Switch, Route, Link } from "react-router-dom";
 import "antd/dist/antd.css";
 import {  JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
-import {  LinkOutlined } from "@ant-design/icons"
+import {  LinkOutlined, CoffeeOutlined, PrinterOutlined, FlagOutlined } from "@ant-design/icons"
 import "./App.css";
 import {Row, Col, Button, Menu, Alert, Input, List, Card, Switch as SwitchD, Modal, InputNumber, Tooltip} from "antd";
 import Web3Modal from "web3modal";
@@ -21,7 +21,8 @@ import { INFURA_ID, DAI_ADDRESS, DAI_ABI, NETWORK, NETWORKS } from "./constants"
 import StackGrid from "react-stack-grid";
 import ReactJson from 'react-json-view'
 import assets from './assets.js'
-
+import { FireOutlined } from '@ant-design/icons'
+ 
 const { BufferList } = require('bl')
 // https://www.npmjs.com/package/ipfs-http-client
 const ipfsAPI = require('ipfs-http-client');
@@ -270,29 +271,29 @@ function App(props) {
   const [ loadedAssets, setLoadedAssets ] = useState()
   const updateYourCollectibles = async () => {
     let assetUpdate = []
-    for(let a in assets){
-      try{
-        const forSale = await readContracts.YourCollectible.forSale(utils.id(a))
-        console.log(forSale);
-        let owner
-        let auctionInfo
-        if(!forSale){
-          const tokenId = await readContracts.YourCollectible.uriToTokenId(utils.id(a))
-          // owner = await readContracts.YourCollectible.ownerOf(tokenId)
-          // const nftAddress = readContracts.YourCollectible.address;
-          // auctionInfo = await readContracts.Auction.getTokenAuctionDetails(nftAddress, tokenId);
-          let getOwner = readContracts.YourCollectible.ownerOf(tokenId);
-          const nftAddress = readContracts.YourCollectible.address;
-          let getAuctionInfo = readContracts.Auction.getTokenAuctionDetails(nftAddress, tokenId);
-          [owner, auctionInfo] = await Promise.all(getOwner, getAuctionInfo);
-        }
-
-
-        assetUpdate.push({id:a,...assets[a],forSale,owner, auctionInfo})
-      }catch(e){console.log(e)}
+    let assetKeys = Object.keys(assets);
+    try {
+      let forSaleArr = await Promise.all(assetKeys.map(a=>readContracts.YourCollectible.forSale(utils.id(a))))
+      assetUpdate = await Promise.all(assetKeys.map((id,idx)=> {
+        const forSale = forSaleArr[idx];
+        if (forSale) return Promise.resolve(({id, ...assets[id],forSale }));
+        return new Promise((res,rej)=>{
+          readContracts.YourCollectible.uriToTokenId(utils.id(id)).then(tokenId=>{
+            let getOwner = readContracts.YourCollectible.ownerOf(tokenId);
+            const nftAddress = readContracts.YourCollectible.address;
+            let getAuctionInfo = readContracts.Auction.getTokenAuctionDetails(nftAddress, tokenId);
+            Promise.all([getOwner, getAuctionInfo]).then(([owner, auctionInfo])=>{
+              res({id, ...assets[id],forSale,owner, auctionInfo})
+            })
+          })
+        })
+      }))
+    } catch (error) {
+      console.log(error); 
     }
     setLoadedAssets(assetUpdate)
   }
+
   useEffect(()=>{
     if(readContracts && readContracts.YourCollectible) updateYourCollectibles()
   }, [ assets, readContracts, transferEvents ]);
@@ -333,21 +334,24 @@ function App(props) {
 
   let galleryList = []
   for(let a in (loadedAssets ? loadedAssets.slice(0, 6) : [])){
-    console.log("loadedAssets",a,loadedAssets[a])
+    // console.log("loadedAssets",a,loadedAssets[a])
     const {auctionInfo, owner, id, forSale, name, external_url, image, description } = loadedAssets[a];
 
     let cardActions = []
     let auctionDetails = [];
     if(forSale){
       cardActions.push(
-        <div>
-          <Button onClick={()=>{
-            console.log("gasPrice,",gasPrice);
-            console.log("mintItem=======",id);
-            tx( writeContracts.YourCollectible.mintItem(id) )
-          }}>
-            Mint
-          </Button>
+        <div className="cardAction">
+          <div className="actionBox">
+            <Button block onClick={()=>{
+              console.log("gasPrice,",gasPrice);
+              console.log("mintItem=======",id);
+              tx( writeContracts.YourCollectible.mintItem(id) )
+            }}>
+              <PrinterOutlined />
+              Mint
+            </Button>
+          </div>
         </div>
       )
       auctionDetails.push(null)
@@ -355,22 +359,19 @@ function App(props) {
       const { auctionInfo } = loadedAssets[a];
       const deadline = new Date(auctionInfo.duration * 1000);
       const isEnded = deadline <= new Date();
-      const btnStyle = { marginBottom: "10px" }
+      const btnStyle = { marginBottom: "0px" }
       const { isActive, seller, price, maxBidUser, maxBid } = auctionInfo;
 
       cardActions.push(
-        <div>
-          <div>
-          owned by: <Address
-            address={owner}
-            ensProvider={mainnetProvider}
-            blockExplorer={blockExplorer}
-            minimized={true}
-          />
+        <div className="cardAction">
+          <div className="actionBox">
+            {!isActive && address === owner && <><Button style={btnStyle} block type="primary" onClick={startAuction(id)} disabled={address !== owner}><FlagOutlined />Start auction</Button></> }
+            {/* isActive && address === seller */}
+            { isActive && address === seller && <>
+              <Button style={btnStyle} block ghost type="primary" onClick={completeAuction(id)}>Complete auction</Button>
+              <Button style={{...btnStyle, fontWeight:"bold"}} block danger type="text" onClick={cancelAuction(id)}><FireOutlined />Cancel</Button>
+            </>}
           </div>
-          {!isActive && address === owner && <><Button style={btnStyle} onClick={startAuction(id)} disabled={address !== owner}>Start auction</Button><br/></> }
-          {isActive && address === seller && <><Button style={btnStyle} onClick={completeAuction(id)}>Complete auction</Button><br/></>}
-          {isActive && address === seller && <><Button style={btnStyle} onClick={cancelAuction(id)}>Cancel auction</Button><br/></>}
           {/* {!loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].owner && <><Button style={{ marginBottom: "10px" }} onClick={startAuction(loadedAssets[a].id)} disabled={address !== loadedAssets[a].owner}>Start auction</Button><br/></>}
           {loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].auctionInfo.seller && <><Button style={{ marginBottom: "10px" }} onClick={completeAuction(loadedAssets[a].id)}>Complete auction</Button><br/></>}
           {loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].auctionInfo.seller && <><Button style={{ marginBottom: "10px" }} onClick={cancelAuction(loadedAssets[a].id)}>Cancel auction</Button><br/></>} */}
@@ -404,22 +405,28 @@ function App(props) {
     }
 
     galleryList.push(
-        <>
-      <Card style={{width:300}} key={name}
-        actions={cardActions}
-        title={(
-          <div>
-            {name} <a style={{cursor:"pointer",opacity:0.33}} href={external_url} target="_blank"><LinkOutlined /></a>
+      <div key={name} className={"cardBox"}>
+        <div className={"imgBox"} >
+          <div style={{height:'100%'}} >
+            <img src={image}/>
           </div>
-        )}
-      >
-        <img style={{maxWidth:130}} src={image}/>
-        <div style={{opacity:0.77}}>
-          {description}
+        </div>
+        <div className={"infoBox"} >
+          {owner&&<div>
+            owned by: <Address
+              address={owner}
+              ensProvider={mainnetProvider}
+              blockExplorer={blockExplorer}
+              minimized={true}
+            />
+          </div>}
+          <div style={{opacity:0.77}}>
+            {description}
+          </div>
         </div>
         {auctionDetails}
-      </Card>
-          </>
+        <div>{cardActions}</div>
+      </div>
     )
   }
 
@@ -630,7 +637,7 @@ function App(props) {
         </Switch>
       </BrowserRouter>
 
-      <ThemeSwitch />
+      {/* <ThemeSwitch /> */}
 
 
       {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}

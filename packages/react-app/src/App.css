@@ -1,3 +1,64 @@
 .App {
   text-align: center;
 }
+
+.cardBox {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #fff;
+  border: 1px solid #e5e8eb;
+  border-radius: 10px;
+  position: relative;
+  z-index: 2;
+  width: 297px;
+  overflow: hidden;
+}
+
+.cardBox:hover {
+  transform: translateY(-2px);
+  box-shadow: rgb(4 17 29 / 25%) 0px 0px 8px 0px;
+  transition: all 0.1s ease 0s;
+}
+
+.cardBox .imgBox {
+  height: 295px;
+  width: 295px;
+  overflow: hidden;
+}
+
+.cardBox .imgBox img {
+  object-fit: contain;
+  width: auto;
+  /* height: auto; */
+  height: 100%;
+  max-width: 100%;
+  /* max-height: 100%; */
+  border-radius: 0px;
+}
+
+.cardBox .infoBox {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 5px 10px;
+  height: 55px;
+  border-top: 1px solid #eee;
+}
+
+.cardAction .actionBox {
+  font-weight: 500;
+  padding: 0 12px;
+  /* padding-top: 0; */
+  display: flex;
+  align-items: center;
+  height: 42px;
+  width: 100%;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  background: linear-gradient(rgba(229, 232, 235, 0.392) 0%, rgb(255, 255, 255) 20%);
+}
+
+.cardAction .actionBox:hover {
+  font-weight: bold;
+}
