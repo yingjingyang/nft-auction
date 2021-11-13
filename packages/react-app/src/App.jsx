@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Switch, Route, Link } from "react-router-dom";
 import "antd/dist/antd.css";
 import {  JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
-import {  LinkOutlined } from "@ant-design/icons"
+import {  LinkOutlined, CoffeeOutlined, PrinterOutlined, FlagOutlined } from "@ant-design/icons"
 import "./App.css";
 import {Row, Col, Button, Menu, Alert, Input, List, Card, Switch as SwitchD, Modal, InputNumber, Tooltip} from "antd";
 import Web3Modal from "web3modal";
@@ -21,7 +21,8 @@ import { INFURA_ID, DAI_ADDRESS, DAI_ABI, NETWORK, NETWORKS } from "./constants"
 import StackGrid from "react-stack-grid";
 import ReactJson from 'react-json-view'
 import assets from './assets.js'
-
+import { FireOutlined } from '@ant-design/icons'
+ 
 const { BufferList } = require('bl')
 // https://www.npmjs.com/package/ipfs-http-client
 const ipfsAPI = require('ipfs-http-client');
@@ -340,14 +341,17 @@ function App(props) {
     let auctionDetails = [];
     if(forSale){
       cardActions.push(
-        <div>
-          <Button onClick={()=>{
-            console.log("gasPrice,",gasPrice);
-            console.log("mintItem=======",id);
-            tx( writeContracts.YourCollectible.mintItem(id) )
-          }}>
-            Mint
-          </Button>
+        <div className="cardAction">
+          <div className="actionBox">
+            <Button block onClick={()=>{
+              console.log("gasPrice,",gasPrice);
+              console.log("mintItem=======",id);
+              tx( writeContracts.YourCollectible.mintItem(id) )
+            }}>
+              <PrinterOutlined />
+              Mint
+            </Button>
+          </div>
         </div>
       )
       auctionDetails.push(null)
@@ -355,22 +359,19 @@ function App(props) {
       const { auctionInfo } = loadedAssets[a];
       const deadline = new Date(auctionInfo.duration * 1000);
       const isEnded = deadline <= new Date();
-      const btnStyle = { marginBottom: "10px" }
+      const btnStyle = { marginBottom: "0px" }
       const { isActive, seller, price, maxBidUser, maxBid } = auctionInfo;
 
       cardActions.push(
-        <div>
-          <div>
-          owned by: <Address
-            address={owner}
-            ensProvider={mainnetProvider}
-            blockExplorer={blockExplorer}
-            minimized={true}
-          />
+        <div className="cardAction">
+          <div className="actionBox">
+            {!isActive && address === owner && <><Button style={btnStyle} block type="primary" onClick={startAuction(id)} disabled={address !== owner}><FlagOutlined />Start auction</Button></> }
+            {/* isActive && address === seller */}
+            { isActive && address === seller && <>
+              <Button style={btnStyle} block ghost type="primary" onClick={completeAuction(id)}>Complete auction</Button>
+              <Button style={{...btnStyle, fontWeight:"bold"}} block danger type="text" onClick={cancelAuction(id)}><FireOutlined />Cancel</Button>
+            </>}
           </div>
-          {!isActive && address === owner && <><Button style={btnStyle} onClick={startAuction(id)} disabled={address !== owner}>Start auction</Button><br/></> }
-          {isActive && address === seller && <><Button style={btnStyle} onClick={completeAuction(id)}>Complete auction</Button><br/></>}
-          {isActive && address === seller && <><Button style={btnStyle} onClick={cancelAuction(id)}>Cancel auction</Button><br/></>}
           {/* {!loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].owner && <><Button style={{ marginBottom: "10px" }} onClick={startAuction(loadedAssets[a].id)} disabled={address !== loadedAssets[a].owner}>Start auction</Button><br/></>}
           {loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].auctionInfo.seller && <><Button style={{ marginBottom: "10px" }} onClick={completeAuction(loadedAssets[a].id)}>Complete auction</Button><br/></>}
           {loadedAssets[a].auctionInfo.isActive && address === loadedAssets[a].auctionInfo.seller && <><Button style={{ marginBottom: "10px" }} onClick={cancelAuction(loadedAssets[a].id)}>Cancel auction</Button><br/></>} */}
@@ -410,8 +411,18 @@ function App(props) {
             <img src={image}/>
           </div>
         </div>
-        <div style={{opacity:0.77}}>
-          {description}
+        <div className={"infoBox"} >
+          {owner&&<div>
+            owned by: <Address
+              address={owner}
+              ensProvider={mainnetProvider}
+              blockExplorer={blockExplorer}
+              minimized={true}
+            />
+          </div>}
+          <div style={{opacity:0.77}}>
+            {description}
+          </div>
         </div>
         {auctionDetails}
         <div>{cardActions}</div>
