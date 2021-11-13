@@ -270,29 +270,29 @@ function App(props) {
   const [ loadedAssets, setLoadedAssets ] = useState()
   const updateYourCollectibles = async () => {
     let assetUpdate = []
-    for(let a in assets){
-      try{
-        const forSale = await readContracts.YourCollectible.forSale(utils.id(a))
-        console.log(forSale);
-        let owner
-        let auctionInfo
-        if(!forSale){
-          const tokenId = await readContracts.YourCollectible.uriToTokenId(utils.id(a))
-          // owner = await readContracts.YourCollectible.ownerOf(tokenId)
-          // const nftAddress = readContracts.YourCollectible.address;
-          // auctionInfo = await readContracts.Auction.getTokenAuctionDetails(nftAddress, tokenId);
-          let getOwner = readContracts.YourCollectible.ownerOf(tokenId);
-          const nftAddress = readContracts.YourCollectible.address;
-          let getAuctionInfo = readContracts.Auction.getTokenAuctionDetails(nftAddress, tokenId);
-          [owner, auctionInfo] = await Promise.all(getOwner, getAuctionInfo);
-        }
-
-
-        assetUpdate.push({id:a,...assets[a],forSale,owner, auctionInfo})
-      }catch(e){console.log(e)}
+    let assetKeys = Object.keys(assets);
+    try {
+      let forSaleArr = await Promise.all(assetKeys.map(a=>readContracts.YourCollectible.forSale(utils.id(a))))
+      assetUpdate = await Promise.all(assetKeys.map((id,idx)=> {
+        const forSale = forSaleArr[idx];
+        if (forSale) return Promise.resolve(({id, ...assets[id],forSale }));
+        return new Promise((res,rej)=>{
+          readContracts.YourCollectible.uriToTokenId(utils.id(id)).then(tokenId=>{
+            let getOwner = readContracts.YourCollectible.ownerOf(tokenId);
+            const nftAddress = readContracts.YourCollectible.address;
+            let getAuctionInfo = readContracts.Auction.getTokenAuctionDetails(nftAddress, tokenId);
+            Promise.all([getOwner, getAuctionInfo]).then(([owner, auctionInfo])=>{
+              res({id, ...assets[id],forSale,owner, auctionInfo})
+            })
+          })
+        })
+      }))
+    } catch (error) {
+      console.log(error); 
     }
     setLoadedAssets(assetUpdate)
   }
+
   useEffect(()=>{
     if(readContracts && readContracts.YourCollectible) updateYourCollectibles()
   }, [ assets, readContracts, transferEvents ]);
@@ -333,7 +333,7 @@ function App(props) {
 
   let galleryList = []
   for(let a in (loadedAssets ? loadedAssets.slice(0, 6) : [])){
-    console.log("loadedAssets",a,loadedAssets[a])
+    // console.log("loadedAssets",a,loadedAssets[a])
     const {auctionInfo, owner, id, forSale, name, external_url, image, description } = loadedAssets[a];
 
     let cardActions = []
@@ -404,22 +404,18 @@ function App(props) {
     }
 
     galleryList.push(
-        <>
-      <Card style={{width:300}} key={name}
-        actions={cardActions}
-        title={(
-          <div>
-            {name} <a style={{cursor:"pointer",opacity:0.33}} href={external_url} target="_blank"><LinkOutlined /></a>
+      <div key={name} className={"cardBox"}>
+        <div className={"imgBox"} >
+          <div style={{height:'100%'}} >
+            <img src={image}/>
           </div>
-        )}
-      >
-        <img style={{maxWidth:130}} src={image}/>
+        </div>
         <div style={{opacity:0.77}}>
           {description}
         </div>
         {auctionDetails}
-      </Card>
-          </>
+        <div>{cardActions}</div>
+      </div>
     )
   }
 
@@ -630,7 +626,7 @@ function App(props) {
         </Switch>
       </BrowserRouter>
 
-      <ThemeSwitch />
+      {/* <ThemeSwitch /> */}
 
 
       {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
