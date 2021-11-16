@@ -32,6 +32,7 @@ const main = async () => {
   );
 };
 
+
 const deploy = async (contractName, _args = [], overrides = {}, libraries = {}) => {
   console.log(` 🛰  Deploying: ${contractName}`);
 

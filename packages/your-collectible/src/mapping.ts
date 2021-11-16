@@ -75,10 +75,19 @@ export function handleTransfer(event: Transfer): void {
     token.tokenId = tokenId;
   }
 
-  token.isBurn = to === zeroAddr;
-  token.isAuction = to === auctionAddr || !(from === auctionAddr);
+  if ( to == zeroAddr ){
+    token.isBurn = true;
+  }else{
+    token.isBurn = false;
+  }
+  
+  if( to == auctionAddr ){
+    token.isAuction = true;
+  }else{
+    token.isAuction = false;
+  }
 
-  if (to !== auctionAddr && to !== zeroAddr) {
+  if (to !== auctionAddr) {
     token.owner = to;
   }
 
