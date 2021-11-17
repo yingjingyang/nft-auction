@@ -38,9 +38,7 @@ export function handleTransfer(event: Transfer): void {
     token.isAuction = false;
   }
 
-  if (to !== auctionAddr) {
-    token.owner = to;
-  }
+  token.owner = to;
 
   token.save();
 }
